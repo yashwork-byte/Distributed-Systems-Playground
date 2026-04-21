@@ -1,5 +1,6 @@
 import express from 'express'
 import taskRoutes from './routes/tasks'
+import metricsRoutes from './routes/metrics'
 import {startWorker} from './workers/taskWorker'
 
 const app = express()
@@ -8,10 +9,8 @@ const PORT = 3000
 app.use(express.json())
 
 app.use('/tasks', taskRoutes)
+app.use('/metrics', metricsRoutes)
 
-app.get('/', (req, res) => {
-    res.send('Distributed Playground Running')
-})
 
 app.listen(PORT, () => {console.log(`Server is running on port ${PORT}`)})
 

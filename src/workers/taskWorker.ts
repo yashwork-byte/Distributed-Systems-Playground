@@ -1,7 +1,7 @@
 import {
     claimNextTask,
     completeTask,
-    failTask
+    retryTask
 } from '../store/taskStore'
 
 function sleep(ms: number): Promise<void> {
@@ -13,15 +13,17 @@ async function process(workerId: string){
 
     if(!task) return
 
-    console.log(`[${workerId}] picked task ${task.id}`)
+    console.log(`[${workerId}] processing task ${task.id} attempt ${task.attempts}`)
 
     await sleep(3000)
 
-    const shouldFail = Math.random() < 0.2
+    const shouldFail = Math.random() < 0.3
 
     if(shouldFail){
-        failTask(task.id)
         console.log(`[${workerId}] failed task ${task.id}`)
+        
+
+        retryTask(task.id)
         return
     }
 

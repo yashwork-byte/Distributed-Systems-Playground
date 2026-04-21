@@ -1,4 +1,4 @@
-export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed'
+export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'dead-letter'
 
 export interface Task{
     id: number,
@@ -7,4 +7,7 @@ export interface Task{
     status: TaskStatus,
     createdAt: string,
     workerId?: string
+    attempts: number,
+    maxAttempts: number,
+    nextRetryAt?: number
 }
