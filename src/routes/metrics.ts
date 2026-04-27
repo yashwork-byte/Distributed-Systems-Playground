@@ -3,8 +3,9 @@ import {getMetrics} from '../store/taskStore'
 
 const router = Router()
 
-router.get('/', (req, res) => {
-    res.json(getMetrics())
+router.get('/', async(req, res) => {
+    const metrics = await getMetrics()
+    res.json(metrics)
 })
 
 export default router

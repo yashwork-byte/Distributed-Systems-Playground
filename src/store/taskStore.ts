@@ -1,79 +1,109 @@
-import {Task} from '../types/task'
+import {pgClient} from '../db'
 
-let tasks: Task[] = []
-let currentId = 1
-
-export function createTask(
+export async function createTask(
     type : string,
     payload: Record<string, unknown>
-): Task{
-    const task: Task ={
-        id: currentId++,
-        type,
-        payload,
-        status: 'queued',
-        createdAt: new Date().toISOString(),
-        attempts: 0,
-        maxAttempts: 3
-    }
+){
+    const query = `
+    INSERT INTO tasks
+    (type, payload, status)
+    VALUES ($1, $2, 'queued')
+    RETURNING *;
+    `
 
-    tasks.push(task)
-    return task
+    const result = await pgClient.query(query, [type, payload])
+
+    return result.rows[0]
 }
 
-export function getAllTasks(): Task[]{
-    return tasks
+export async function getAllTasks() {
+  const result = await pgClient.query(
+    `SELECT * FROM tasks ORDER BY id`
+  );
+
+  return result.rows;
 }
 
-export function getTaskById(id: number): Task | undefined {
-  return tasks.find((task) => task.id === id);
+export async function getTaskById(id: number) {
+  const query = `
+    SELECT *
+    FROM tasks
+    WHERE id = $1
+    LIMIT 1;
+  `;
+
+  const result = await pgClient.query(query, [id]);
+
+  return result.rows[0];
 }
 
-export function claimNextTask(
+export async function claimNextTask(
     workerId: string
-): Task | undefined {
-    const now = Date.now()
-
-    const task = tasks.find(
-        (task) => task.status === 'queued' && (!task.nextRetryAt || task.nextRetryAt <= now)
+){
+    const query = `
+    UPDATE tasks
+    SET status = 'running',
+        worker_id = $1,
+        attempts = attempts + 1
+    WHERE id = (
+        SELECT id FROM tasks
+        WHERE status = 'queued'
+        AND (
+            next_retry_at IS NULL OR
+            next_retry_at <= $2
+        )
+        ORDER BY id
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
     )
+    RETURNING *;
+    `
 
-    if(!task) return undefined
-
-    task.status = 'running'
-    task.workerId = workerId
-    task.attempts++
-
-    return task
+    const result = await pgClient.query(query, [workerId, Date.now()])
+    return result.rows[0]
 }
 
-export function completeTask(id: number){
-    const task = getTaskById(id)
-
-    if(task) task.status = 'completed'
+export async function completeTask(id: number){
+    await pgClient.query(
+        `UPDATE tasks 
+        SET status = 'completed'
+        WHERE id = $1`,
+        [id]
+    )
 }
 
-export function retryTask(id: number){
-    const task = getTaskById(id)
-    if(!task) return
-
-    if(task.attempts >= task.maxAttempts){
-        task.status = 'dead-letter'
+export async function retryTask(id: number,
+    attempts: number, maxAttempts: number
+){
+    if(attempts >= maxAttempts){
+        await pgClient.query(
+            `UPDATE tasks
+            SET status = 'dead-letter'
+            WHERE id = $1`, [id]
+        )
         return
     }
 
-    const backOffMins = task.attempts * 3000
+    const delay = attempts * 3000
 
-    task.status = 'queued'
-    task.nextRetryAt = Date.now() + backOffMins
+    await pgClient.query(
+        `UPDATE tasks
+        SET status = 'queued',
+            next_retry_at = $2
+            WHERE id = $1`,
+        [id, Date.now() + delay]
+    )
 }
 
-export function getMetrics(){
-    return{
-        total: tasks.length,
-        queued: tasks.filter((t) => t.status === 'queued').length,
-        running: tasks.filter((t) => t.status === 'running').length,
-        completed: tasks.filter((t) => t.status === 'completed').length,
-        deadLetter: tasks.filter((t) => t.status === 'dead-letter').length,
-    }
+export async function getMetrics(){
+    const result = await pgClient.query(`
+        SELECT
+      COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE status='queued') AS queued,
+      COUNT(*) FILTER (WHERE status='running') AS running,
+      COUNT(*) FILTER (WHERE status='completed') AS completed,
+      COUNT(*) FILTER (WHERE status='dead-letter') AS dead_letter
+    FROM tasks;`)
+
+    return result.rows[0]
 }

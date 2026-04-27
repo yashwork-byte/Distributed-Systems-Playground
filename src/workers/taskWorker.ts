@@ -9,7 +9,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function process(workerId: string){
-    const task = claimNextTask(workerId)
+    const task = await claimNextTask(workerId)
 
     if(!task) return
 
@@ -22,12 +22,14 @@ async function process(workerId: string){
     if(shouldFail){
         console.log(`[${workerId}] failed task ${task.id}`)
         
-
-        retryTask(task.id)
+        await retryTask(task.id,
+            task.attempts,
+            task.max_attempts
+        )
         return
     }
 
-    completeTask(task.id)
+    await completeTask(task.id)
     console.log(`[${workerId}] completed task ${task.id}`)
 }
 
