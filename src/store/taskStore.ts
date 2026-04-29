@@ -37,31 +37,31 @@ export async function getTaskById(id: number) {
   return result.rows[0];
 }
 
-export async function claimNextTask(
-    workerId: string
-){
-    const query = `
-    UPDATE tasks
-    SET status = 'running',
-        worker_id = $1,
-        attempts = attempts + 1
-    WHERE id = (
-        SELECT id FROM tasks
-        WHERE status = 'queued'
-        AND (
-            next_retry_at IS NULL OR
-            next_retry_at <= $2
-        )
-        ORDER BY id
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    )
-    RETURNING *;
-    `
+// export async function claimNextTask(
+//     workerId: string
+// ){
+//     const query = `
+//     UPDATE tasks
+//     SET status = 'running',
+//         worker_id = $1,
+//         attempts = attempts + 1
+//     WHERE id = (
+//         SELECT id FROM tasks
+//         WHERE status = 'queued'
+//         AND (
+//             next_retry_at IS NULL OR
+//             next_retry_at <= $2
+//         )
+//         ORDER BY id
+//         LIMIT 1
+//         FOR UPDATE SKIP LOCKED
+//     )
+//     RETURNING *;
+//     `
 
-    const result = await pgClient.query(query, [workerId, Date.now()])
-    return result.rows[0]
-}
+//     const result = await pgClient.query(query, [workerId, Date.now()])
+//     return result.rows[0]
+// }
 
 export async function completeTask(id: number){
     await pgClient.query(

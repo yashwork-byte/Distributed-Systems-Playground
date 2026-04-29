@@ -5,6 +5,8 @@ import {createTask,
     getTaskById
 } from '../store/taskStore'
 
+import {enqueueTask} from '../queue/producer'
+
 const router = Router()
 
 router.post('/', async(req: Request, res: Response) => {
@@ -17,6 +19,7 @@ router.post('/', async(req: Request, res: Response) => {
     }
 
     const task = await createTask(type, payload || {})
+    await enqueueTask(task.id)
     return res.status(201).json(task)
 })
 
