@@ -1,6 +1,7 @@
 import express from 'express'
 import 'dotenv/config'
 
+import './ws/wsServer'
 import {connectRedis} from './redis'
 import {startConsumer} from './workers/consumer'
 import {connectDB} from './db'
