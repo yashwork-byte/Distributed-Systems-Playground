@@ -6,6 +6,7 @@ import {startConsumer} from './workers/consumer'
 import {connectDB} from './db'
 import taskRoutes from './routes/tasks'
 import metricsRoutes from './routes/metrics'
+import {startRetryConsumer} from './workers/retryConsumer'
 
 const app = express()
 const PORT = 3000
@@ -24,6 +25,8 @@ async function main(){
     startConsumer("worker-1");
     startConsumer("worker-2");
     startConsumer("worker-3");
+
+    startRetryConsumer('retry-1')
 }
 
 main()

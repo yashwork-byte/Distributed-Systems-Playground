@@ -6,10 +6,11 @@ import {createTask,
 } from '../store/taskStore'
 
 import {enqueueTask} from '../queue/producer'
+import {taskLimiter} from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.post('/', async(req: Request, res: Response) => {
+router.post('/', taskLimiter, async(req: Request, res: Response) => {
     const{type, payload} = req.body
 
     if(!type || typeof type !== 'string'){

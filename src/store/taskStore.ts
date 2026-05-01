@@ -95,6 +95,15 @@ export async function retryTask(id: number,
     )
 }
 
+export async function isTaskCompleted(id: number){
+    const res = await pgClient.query(
+        `SELECT status FROM tasks WHERE id = $1`,
+        [id]
+    )
+
+    return res.rows[0]?.status === 'completed'
+}
+
 export async function getMetrics(){
     const result = await pgClient.query(`
         SELECT

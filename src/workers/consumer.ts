@@ -2,9 +2,12 @@ import {redisClient} from '../redis'
 
 import {
     completeTask,
-    retryTask, 
+    isTaskCompleted, 
     getTaskById
 } from '../store/taskStore'
+
+import {enqueueRetry} from '../queue/retryProducer'
+import {sendToDLQ} from '../queue/dlqProducer'
 
 const STREAM = 'tasks:stream'
 const GROUP = 'workers'
@@ -47,15 +50,25 @@ export async function startConsumer(consumerName: string){
         const task = await getTaskById(taskId)
         if(!task) continue
 
+        if(await isTaskCompleted(task.id)){
+            console.log(`Skipping already completed ${task.id}`)
+            return
+        }
+
         await sleep(3000)
 
         const fail = Math.random() < 0.3
 
         if(fail){
-            await retryTask(task.id,
-            task.attempts,
-            task.max_attempts
-        )
+            const attempts = task.attempts + 1
+
+            if(attempts > task.max_attempts){
+                await sendToDLQ(task.id)
+            }
+            else{
+                const delay = attempts * 3000
+                await enqueueRetry(task.id, delay)
+            }
         }
         else {
             await completeTask(task.id)
