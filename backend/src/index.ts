@@ -1,5 +1,6 @@
 import express from 'express'
 import 'dotenv/config'
+import cors from 'cors'
 
 import './ws/wsServer'
 import {connectRedis} from './redis'
@@ -13,6 +14,7 @@ const app = express()
 const PORT = 3000
 
 app.use(express.json())
+app.use(cors())
 
 app.use('/tasks', taskRoutes)
 app.use('/metrics', metricsRoutes)
